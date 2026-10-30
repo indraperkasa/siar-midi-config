@@ -5,7 +5,20 @@
     <title>SIAR-MIDI Configurator Tool</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #e0e0e0; padding: 30px; text-align: center; }
-        h1 { color: #ffffff; letter-spacing: 2px; margin-bottom: 5px; }
+        
+        /* Logo Header Styling */
+        .header-logo-container {
+            margin: 20px auto 10px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .header-logo {
+            height: 65px;          /* Balanced title-replacement height */
+            width: auto;
+            max-width: 100%;
+        }
+
         .status-container { margin: 20px auto; padding: 15px; width: 320px; border-radius: 6px; background: #1e1e1e; border: 1px solid #333; }
         .btn { background: #00adb5; color: #fff; border: none; padding: 10px 20px; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; }
         .btn:hover { background: #00f5ff; color: #000; }
@@ -23,8 +36,12 @@
 </head>
 <body>
 
-    <h1>SIAR-MIDI DECK PANEL</h1>
-    <p>Hardware Profile Manager via Native Web Serial Interface</p>
+    <div class="header-logo-container">
+        <!-- Change 'logo.png' to your actual file name if it's different -->
+        <img src="siar-midi-logo.png" alt="SIAR-MIDI Logo" class="header-logo">
+    </div>
+    
+    <p style="margin-top: 0; margin-bottom: 25px; color: #aaaaaa;">Hardware Profile Manager via Native Web Serial Interface</p>
 
     <div class="status-container">
         <div id="statusText" style="color: #ff5722; margin-bottom: 10px;">Status: Disconnected</div>
