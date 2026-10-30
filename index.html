@@ -1,0 +1,123 @@
+<head>
+    <meta charset="UTF-8">
+    <title>SIAR-MIDI Configurator Tool</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #e0e0e0; padding: 30px; text-align: center; }
+        h1 { color: #ffffff; letter-spacing: 2px; margin-bottom: 5px; }
+        .status-container { margin: 20px auto; padding: 15px; width: 300px; border-radius: 6px; background: #1e1e1e; border: 1px solid #333; }
+        .btn { background: #00adb5; color: #fff; border: none; padding: 10px 20px; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        .btn:hover { background: #00f5ff; color: #000; }
+        .deck-grid { display: flex; justify-content: center; gap: 40px; margin-top: 30px; flex-wrap: wrap; }
+        .bank-card { background: #1e1e1e; padding: 25px; border-radius: 8px; border: 1px solid #292929; width: 280px; }
+        .bank-card h2 { margin-top: 0; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .control-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; }
+        label { font-weight: 600; color: #aaaaaa; }
+        select { background: #2d2d2d; color: #fff; border: 1px solid #444; padding: 6px 10px; border-radius: 4px; width: 80px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <h1>SIAR-MIDI DECK PANEL</h1>
+    <p>Hardware Profile Manager via Native Web Serial Interface</p>
+
+    <div class="status-container">
+        <div id="statusText" style="color: #ff5722; margin-bottom: 10px;">Status: Disconnected</div>
+        <button class="btn" id="connectBtn">CONNECT CONTROLLER</button>
+    </div>
+
+    <div class="deck-grid">
+        <!-- BANK 1 MATRIX -->
+        <div class="bank-card" style="border-top: 4px solid #ff3b30;">
+            <h2>BANK 1 (Red LED)</h2>
+            <div id="bank1-rows"></div>
+        </div>
+
+        <!-- BANK 2 MATRIX -->
+        <div class="bank-card" style="border-top: 4px solid #4cd964;">
+            <h2>BANK 2 (Green LED)</h2>
+            <div id="bank2-rows"></div>
+        </div>
+    </div>
+
+    <script>
+        let port = null;
+        let writer = null;
+
+        // Auto-generate dropdown elements for the 5 knobs across both pages
+        function buildInterfaceElements() {
+            for (let bank = 0; bank < 2; bank++) {
+                const container = document.getElementById(`bank${bank + 1}-rows`);
+                for (let knob = 0; knob < 5; knob++) {
+                    const row = document.createElement('div');
+                    row.className = 'control-row';
+                    
+                    const label = document.createElement('label');
+                    label.textContent = `Knob ${knob + 1} CC:`;
+                    
+                    const select = document.createElement('select');
+                    select.dataset.bank = bank;
+                    select.dataset.knob = knob;
+                    
+                    // Fill dropdown options with valid MIDI CC values (0-127)
+                    for (let cc = 0; cc <= 127; cc++) {
+                        const opt = document.createElement('option');
+                        opt.value = cc;
+                        opt.textContent = cc;
+                        // Default starting baseline match values
+                        if (bank === 0 && cc === (knob + 1)) opt.selected = true;
+                        if (bank === 1 && knob === 4 && cc === 35) opt.selected = true;
+                        if (bank === 1 && knob < 4 && cc === (knob + 6)) opt.selected = true;
+                        select.appendChild(opt);
+                    }
+                    
+                    select.addEventListener('change', pushNewAssignmentData);
+                    row.appendChild(label);
+                    row.appendChild(select);
+                    container.appendChild(row);
+                }
+            }
+        }
+
+        // Connect to the ESP32-C3 Serial port
+        document.getElementById('connectBtn').addEventListener('click', async () => {
+            if (!("serial" in navigator)) {
+                alert("Web Serial is unsupported by this browser. Please open Chrome!");
+                return;
+            }
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                writer = port.writable.getWriter();
+                
+                document.getElementById('statusText').textContent = "Status: Connected Successfully";
+                document.getElementById('statusText').style.color = "#4cd964";
+                document.getElementById('connectBtn').style.display = "none";
+            } catch (err) {
+                console.error("Connection baseline crash: ", err);
+                alert("Connection failed.");
+            }
+        });
+
+        // Transmit values using the text configuration command format over the USB line
+        async function pushNewAssignmentData(event) {
+            if (!writer) {
+                alert("Connect the SIAR-MIDI controller via USB first!");
+                return;
+            }
+            const bank = event.target.dataset.bank;
+            const knob = event.target.dataset.knob;
+            const chosenCC = event.target.value;
+            
+            // Format string matches "SET,[bank],[knob],[CC]\n" pattern inside the C3 code
+            const commandPayload = `SET,${bank},${knob},${chosenCC}\n`;
+            const encoder = new TextEncoder();
+            const dataBuffer = encoder.encode(commandPayload);
+            
+            await writer.write(dataBuffer);
+            console.log(`Transmitting sequence string: ${commandPayload}`);
+        }
+
+        window.onload = buildInterfaceElements;
+    </script>
+</body>
+</html>
